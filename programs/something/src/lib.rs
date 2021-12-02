@@ -22,81 +22,76 @@ Q:what seeds do I use for the PDA, and how can I then transfer authority back to
 after program is done executing
 */
 #[program]
-pub mod fire_away {
+pub mod something {
     use metaplex_token_metadata::utils::{assert_initialized, assert_owned_by, assert_signer};
     use metaplex_token_metadata::state::{Metadata,Data};
     use metaplex_token_metadata::instruction::{update_metadata_accounts};
     use super::*;
     
+
     pub fn initialize(ctx: Context<Initialize>, init_nonce:u8) -> ProgramResult {
-        
-        //1. Metadata derived from mint address as PDA
-        //2. Metadata account must be owned by metadata program
-        //3. Mint authority over mint must be user wallet
-        //4. Make user sign 
-        //5. Access the metadata struct and make sure creator wallet matches eluunesKey
+        let program_pda_account = &mut ctx.accounts.program_pda;
+        program_pda_account.signerA = "true".to_string();
+        Ok(())
+    }
 
-        let user_mint = &ctx.accounts.mint_account;
-        let mint_metadata_account = &mut ctx.accounts.metadata_account;
-        let owner_wallet = &ctx.accounts.owner_wallet;
-        let mint_metadata = &mut Metadata::from_account_info(mint_metadata_account)?;
-        let token_metadata_program = &ctx.accounts.token_metadata_program;
-        let program_pubkey = &ctx.accounts.program_pda;
-        
-        assert_eq!(token_metadata_program.key,&ID);//token metadata program should be valid
-        assert_owned_by(mint_metadata_account, ctx.accounts.token_metadata_program.key)?; //metadata accunt must be owned by metadata program
-        assert_owned_by(&user_mint.to_account_info(),owner_wallet.key)?; //mint authority must be users wallet
-        assert_signer(&owner_wallet)?;
-        
 
-        
-      
 
+    pub fn lock(ctx: Context<Lock>, init_nonce:u8) -> ProgramResult {
+
+        // let user_mint = &ctx.accounts.mint_account;
+        
+        // let owner_wallet = &ctx.accounts.owner_wallet;
+        let mint_metadata = & Metadata::from_account_info(&ctx.accounts.metadata_account)?;
+        // let token_metadata_program = &ctx.accounts.token_metadata_program;
+        
+        
+        // assert_eq!(token_metadata_program.key,&ID);//token metadata program should be valid
+        // assert_owned_by(mint_metadata_account, ctx.accounts.token_metadata_program.key)?; //metadata accunt must be owned by metadata program
+        // assert_owned_by(&user_mint.to_account_info(),owner_wallet.key)?; //mint authority must be users wallet
+        // assert_signer(&owner_wallet)?;
 
         //On the client side generate a program address using this programs id as a seed
 
-        mint_metadata.data.uri = "https://ifgv27za22gw26hddoplvrj6yp6jn2wprr26oqe3wu6hsoqins3q.arweave.net/QU1dfyDWjW144xueusU-w_yW6s-MdedAm7U8eToIbLc".to_owned();
-
-
+      
         //Maybe implement creator wallet check
         // assert_eq!(mint_metadata.data.creators.,eluuneCreator);
-
 
         let new_data = Data {
             name: mint_metadata.data.name.clone(),
             symbol: mint_metadata.data.symbol.clone(),
-            uri: mint_metadata.data.uri.clone(),
+            uri: "https://ifgv27za22gw26hddoplvrj6yp6jn2wprr26oqe3wu6hsoqins3q.arweave.net/QU1dfyDWjW144xueusU-w_yW6s-MdedAm7U8eToIbLc".to_string(),
             seller_fee_basis_points: mint_metadata.data.seller_fee_basis_points,
             creators: mint_metadata.data.creators.clone(),
         }; 
         let metadata_infos = [
-            ctx.accounts.token_metadata_program.to_account_info(),
-            mint_metadata_account.clone()
+            ctx.accounts.metadata_account.clone(),
+            ctx.accounts.program_pda_signer.to_account_info()
 
         ];
         let update_auth_seeds = [
-            "new_update_auth".as_bytes(),
-            "63ZS2VbsixAkraodgrwcA7DW96W58ubLFvG7eKntVBTw".as_bytes(),
+            b"new_update_auth".as_ref(),
+            b"Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS".as_ref(),
             &[init_nonce]
         ];
-        let (program_as_update_authority, bump) = Pubkey::find_program_address(&update_auth_seeds, program_pubkey.key);
+       
 
-        // anchor_lang::solana_program::program::invoke_signed(
-        //     &update_metadata_accounts(
-        //         ID, 
-        //        *mint_metadata_account.key, 
-        //     program_as_update_authority,
-        //     None,
-        //     Some(new_data),
-        //     None,
+        anchor_lang::solana_program::program::invoke_signed(
+            &update_metadata_accounts(
+                *ctx.accounts.token_metadata_program.key, 
+               *ctx.accounts.metadata_account.key, 
+               * ctx.accounts.program_pda_signer.to_account_info().key,
+            None,
+            Some(new_data),
+            None,
              
-        //         ), 
+                ), 
 
-        //        &metadata_infos,
+               &metadata_infos,
 
-        //       &[&update_auth_seeds],
+              &[&update_auth_seeds],
         
-        // )?;
+        )?;
      
 
 
@@ -112,35 +107,54 @@ pub mod fire_away {
 #[instruction(my_bump:u8)]
 pub struct Initialize<'info> {
     
-pub mint_account: Account<'info,Mint>,
 
-#[account( //WARNING THIS IS UNSAFE PROGRAM NEEDS TO INITIALIZE THE BELOW ACCOUNT
+
+#[account( 
     init,
     seeds = [
-    "new_update_auth".as_bytes(),
-    "63ZS2VbsixAkraodgrwcA7DW96W58ubLFvG7eKntVBTw".as_bytes()],
+    b"new_update_auth".as_ref(),
+    b"Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS".as_ref()],
     bump = my_bump,
     payer = owner_wallet,
-    space = 40
+    space = 400
 )]  
-pub program_pda: AccountInfo<'info>,
+pub program_pda: Account<'info,SignerA>,
+
 #[account(mut)]
 pub owner_wallet: Signer<'info>,
+pub system_program: Program<'info, System>,
 
 
-#[account(
-    mut, 
-    seeds = ["metaplex".as_bytes(),
-    ID.as_ref(),
-    mint_account.to_account_info().key.as_ref()],
-    bump = my_bump
-)]
-pub metadata_account: AccountInfo<'info>,  
-
-system_program: Program<'info, System>,
-token_metadata_program: Program<'info, Token>,
-rent: Sysvar<'info, Rent>,
 
 
 }
 
+#[derive(Accounts)]
+#[instruction(my_bump:u8)]
+pub struct Lock<'info> {
+    pub token_metadata_program: AccountInfo<'info>,
+    pub mint_account: Account<'info,Mint>,
+    
+
+    #[account(seeds = [b"new_update_auth".as_ref(),b"Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS".as_ref()],bump=my_bump)]
+    pub program_pda_signer: Account<'info,SignerA>,
+
+    #[account(
+        mut, 
+        seeds = ["metaplex".as_bytes(),
+        ID.as_ref(),
+        mint_account.to_account_info().key.as_ref()],
+        bump = my_bump
+    )]
+    pub metadata_account: AccountInfo<'info>,  
+
+    pub owner_wallet: Signer<'info>,
+
+    pub system_program: Program<'info, System>,
+   
+}
+
+#[account]
+pub struct SignerA{
+    pub signerA: String,
+}
