@@ -1,11 +1,11 @@
-[programs.localnet]
-something = "Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS"
+[programs.devnet]
+something = "5Ff4tvaCetzZmxviCK5HfGb1RKqhJYdcqAozCqG5Wxje"
 
 [registry]
 url = "https://anchor.projectserum.com"
 
 [provider]
-cluster = "localnet"
+cluster = "devnet"
 wallet = "/Users/aryajakkli/.config/solana/id.json"
 
 [scripts]

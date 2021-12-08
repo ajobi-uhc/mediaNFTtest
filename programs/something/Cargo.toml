@@ -21,3 +21,4 @@ anchor-spl = "0.18.2"
 metaplex-token-metadata = { git = "https://github.com/metaplex-foundation/metaplex", rev = "8a69c0d01708b9bbd9cf34fd11bd57669773083d", features = [
     "no-entrypoint",
 ] }
+solana-program = "1.8.6"
